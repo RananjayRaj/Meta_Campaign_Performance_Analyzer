@@ -84,23 +84,6 @@ Statistical Calculation Engine →
                                      └── Historical Export (Sheets)
 ```
 
-## Advanced Analytics Features
-
-### Multi-KPI Performance Scoring
-- **Weighted Algorithm**: Composite scoring system prioritizing ROAS
-- **Campaign Ranking**: Performance-based campaign prioritization
-- **Minimum Threshold Filtering**: Impression-based quality control (1000+ impressions)
-
-### Ad Fatigue Detection System
-- **Frequency Monitoring**: Automated detection at 3.0+ frequency threshold
-- **Performance Correlation**: CTR degradation analysis with frequency increases
-- **Alert Prioritization**: Severity-based ranking by frequency levels
-
-### Demographic Intelligence
-- **Segmentation Analysis**: Age/gender performance breakdowns
-- **Audience Optimization**: CTR and CPA-based demographic ranking
-- **Targeting Recommendations**: Data-driven audience expansion strategies
-
 ## Error Handling & Resilience
 
 ### Data Validation Strategy
@@ -161,63 +144,6 @@ Statistical Calculation Engine →
 - **Historical Trending**: Long-term performance analysis capabilities
 - **Comparative Analytics**: Period-over-period performance tracking
 - **Predictive Indicators**: Early warning systems for campaign performance degradation
-
-## Technical Specifications
-
-### Node Configuration
-| Node Name | Type | Purpose | Key Parameters |
-|-----------|------|---------|----------------|
-| Daily Analysis Trigger | Schedule Trigger | Workflow initiation | Daily interval execution |
-| Setup Variables | Set | Variable initialization | Workflow context setup |
-| Fetch Campaign Data | Google Sheets | Data acquisition | Sheet ID:   |
-| Validate Data | Code (JavaScript) | Data cleaning | Type conversion, validation |
-| Calculate Statistics | Code (JavaScript) | Analytics computation | KPI calculation, aggregation |
-| AI Analysis | Anthropic Claude | Insights generation | Model: claude-3-7-sonnet |
-| Merge | Merge | Data synchronization | Statistical + AI data combination |
-| Generate Email | Code (JavaScript) | Report generation | HTML template compilation |
-| Send Email Report | Gmail | Email distribution | SMTP delivery |
-| Export to Sheets | Google Sheets | Data persistence | Historical tracking |
-
-### Data Schema
-
-#### Input Data Structure
-```json
-{
-  "Date": "YYYY-MM-DD",
-  "Campaign_Name": "string",
-  "Ad_Set_Name": "string", 
-  "Ad_Name": "string",
-  "Age": "string",
-  "Gender": "string",
-  "Impressions": "number",
-  "Clicks": "number",
-  "CTR": "percentage",
-  "CPC": "currency",
-  "CPM": "currency",
-  "Spend": "currency",
-  "Conversions": "number",
-  "CPA": "currency",
-  "Frequency": "number",
-  "Revenue": "currency"
-}
-```
-
-#### Statistical Output Structure
-```json
-{
-  "analysis_date": "YYYY-MM-DD",
-  "total_campaigns": "number",
-  "total_spend": "number",
-  "total_revenue": "number",
-  "overall_ctr": "number",
-  "overall_cpa": "number", 
-  "overall_roas": "number",
-  "avg_frequency": "number",
-  "top_performers": "array",
-  "fatigue_alerts": "array",
-  "top_demographics": "array"
-}
-```
 
 ## Deployment Considerations
 
