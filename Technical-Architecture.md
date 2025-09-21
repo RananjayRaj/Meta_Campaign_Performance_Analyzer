@@ -13,7 +13,7 @@ This N8N workflow provides automated Meta/Facebook advertising campaign performa
 ### 2. Data Acquisition Layer
 - **Google Sheets Integration**: Primary data source connector for campaign metrics
 - **Data Source Configuration**: 
-  - Campaign Performance sheet (775593088)
+  - Campaign Performance sheet ( )
   - Multi-dimensional data structure (date, demographics, performance metrics)
 - **Connection Management**: OAuth2-secured Google Sheets API integration
 
@@ -67,7 +67,7 @@ This N8N workflow provides automated Meta/Facebook advertising campaign performa
   - Performance-based subject line optimization
   - Rich formatting with visual indicators and alerts
 - **Data Persistence**: Google Sheets export for historical tracking
-  - Automated append operations to AI_Analysis_Results sheet (1637424579)
+  - Automated append operations to AI_Analysis_Results sheet
   - 10-column structured data logging with timestamp tracking
   - Top performer serialization with performance metrics
 
@@ -169,7 +169,7 @@ Statistical Calculation Engine →
 |-----------|------|---------|----------------|
 | Daily Analysis Trigger | Schedule Trigger | Workflow initiation | Daily interval execution |
 | Setup Variables | Set | Variable initialization | Workflow context setup |
-| Fetch Campaign Data | Google Sheets | Data acquisition | Sheet ID: 775593088 |
+| Fetch Campaign Data | Google Sheets | Data acquisition | Sheet ID:   |
 | Validate Data | Code (JavaScript) | Data cleaning | Type conversion, validation |
 | Calculate Statistics | Code (JavaScript) | Analytics computation | KPI calculation, aggregation |
 | AI Analysis | Anthropic Claude | Insights generation | Model: claude-3-7-sonnet |
