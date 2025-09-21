@@ -7,6 +7,7 @@ All API keys, email addresses, Google Sheet IDs, webhook IDs, and credential IDs
 - `workflows/meta-ads-performance-analyzer.sanitized.json` — sanitized n8n workflow (importable)
 - `.env.example` — example environment variables with placeholders
 - `README.md` — this file
+- Technical-Architecture.md
 
 ## Quick start
 
