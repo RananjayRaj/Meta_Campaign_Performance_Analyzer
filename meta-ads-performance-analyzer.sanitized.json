@@ -1,0 +1,428 @@
+{
+  "name": "Meta Ads Performance Analyzer Duplicate (SANITIZED)",
+  "nodes": [
+    {
+      "parameters": {
+        "sendTo": "REPLACE_NOTIFY_EMAIL",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html \n$('AI Analysis').item.json.content[0].text\n}}\n\n",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "869e8e2d-c17a-4e9d-9965-8b7b4f585cc9",
+      "name": "Send Email Report1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        368
+      ],
+      "webhookId": null,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_GMAILOAUTH2_CREDENTIAL_ID",
+          "name": "REPLACE_GMAILOAUTH2_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate email report - Fixed to properly handle inputs\nconsole.log('Input items:', items.length);\n\n// Initialize variables\nlet stats = {};\nlet aiAnalysis = 'AI analysis not available';\n\n// The node should receive exactly 2 inputs: stats from Calculate Statistics and AI from AI Analysis\nif (items.length >= 2) {\n  // Look for the stats input (has total_campaigns property)\n  // Look for the AI input (has content array property)\n  \n  for (let i = 0; i < items.length; i++) {\n    const item = items[i].json;\n    \n    if (item.total_campaigns !== undefined) {\n      // This is stats data from Calculate Statistics\n      stats = item;\n      console.log('Found stats data:', { \n        campaigns: stats.total_campaigns, \n        fatigue: (stats.fatigue_alerts || []).length \n      });\n    } else if (item.content && Array.isArray(item.content) && item.content[0] && item.content[0].text) {\n      // This is AI analysis from Anthropic\n      aiAnalysis = item.content[0].text;\n      console.log('Found AI analysis, length:', aiAnalysis.length);\n    }\n  }\n} else {\n  console.error('Expected 2 inputs but got:', items.length);\n  // Handle single input case\n  const item = items[0].json;\n  if (item.total_campaigns !== undefined) {\n    stats = item;\n  } else if (item.content && item.content[0]) {\n    aiAnalysis = item.content[0].text;\n    // Use fallback stats if no stats input\n    stats = {\n      total_campaigns: 0,\n      total_spend: 0,\n      overall_ctr: 0,\n      overall_cpa: 0,\n      avg_frequency: 0,\n      overall_roas: 0,\n      fatigue_alerts: []\n    };\n  }\n}\n\n// Validation - ensure we have the required data\nif (!stats.total_campaigns && stats.total_campaigns !== 0) {\n  console.error('No valid stats data found');\n  stats = {\n    total_campaigns: 0,\n    total_spend: 0,\n    overall_ctr: 0,\n    overall_cpa: 0,\n    avg_frequency: 0,\n    overall_roas: 0,\n    fatigue_alerts: []\n  };\n}\n\n// Format AI text properly\nconst formattedAI = aiAnalysis\n  .replace(/\\n\\n/g, '</p><p>')\n  .replace(/\\n/g, '<br>')\n  .replace(/^/, '<p>')\n  .replace(/$/, '</p>');\n\nfunction formatCurrency(amount) {\n  return `$${(amount || 0).toFixed(2)}`;\n}\n\n// Log final stats for debugging\nconsole.log('Final stats used:', {\n  campaigns: stats.total_campaigns,\n  spend: stats.total_spend,\n  roas: stats.overall_roas,\n  fatigue_count: (stats.fatigue_alerts || []).length\n});\n\nconst emailHTML = `\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; margin: 20px; }\n    .header { background: #4267B2; color: white; padding: 20px; text-align: center; }\n    .metrics { display: flex; justify-content: space-around; margin: 20px 0; flex-wrap: wrap; }\n    .metric { text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px; margin: 5px; min-width: 120px; }\n    .metric-value { font-size: 24px; font-weight: bold; color: #333; }\n    .metric-label { font-size: 12px; color: #666; }\n    .alert { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 10px 0; border-radius: 5px; }\n    .success { background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; margin: 10px 0; border-radius: 5px; }\n    .analysis { background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; line-height: 1.6; }\n    .analysis p { margin-bottom: 15px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>📊 Meta Campaign Performance Report</h1>\n    <p>Daily Analysis - ${new Date().toLocaleDateString()}</p>\n  </div>\n  \n  <div class=\"metrics\">\n    <div class=\"metric\">\n      <div class=\"metric-value\">${stats.total_campaigns || 0}</div>\n      <div class=\"metric-label\">Total Campaigns</div>\n    </div>\n    <div class=\"metric\">\n      <div class=\"metric-value\">${formatCurrency(stats.total_spend || 0)}</div>\n      <div class=\"metric-label\">Total Spend</div>\n    </div>\n    <div class=\"metric\">\n      <div class=\"metric-value\">${((stats.overall_ctr || 0)).toFixed(2)}%</div>\n      <div class=\"metric-label\">Overall CTR</div>\n    </div>\n    <div class=\"metric\">\n      <div class=\"metric-value\">${formatCurrency(stats.overall_cpa || 0)}</div>\n      <div class=\"metric-label\">Overall CPA</div>\n    </div>\n    <div class=\"metric\">\n      <div class=\"metric-value\">${(stats.avg_frequency || 0).toFixed(1)}</div>\n      <div class=\"metric-label\">Avg Frequency</div>\n    </div>\n    <div class=\"metric\">\n      <div class=\"metric-value\">${(stats.overall_roas || 0).toFixed(2)}x</div>\n      <div class=\"metric-label\">Overall ROAS</div>\n    </div>\n  </div>\n  \n  ${(stats.fatigue_alerts || []).length > 0 ? `\n  <div class=\"alert\">\n    <strong>⚠️ Ad Fatigue Alert: ${(stats.fatigue_alerts || []).length} Ads need attention</strong>\n    <p>High frequency detected - immediate action required!</p>\n  </div>\n  ` : '<div class=\"success\">✅ No ad fatigue detected!</div>'}\n  \n  <h2>🧠 AI Analysis & Recommendations</h2>\n  <div class=\"analysis\">${formattedAI}</div>\n  \n  <div style=\"margin-top: 30px; padding: 15px; background: #e9ecef; border-radius: 8px; text-align: center; font-size: 12px;\">\n    Generated by n8n Meta Campaign Analyzer | ${new Date().toLocaleString()}\n  </div>\n</body>\n</html>\n`;\n\nconst fatigueCount = (stats.fatigue_alerts || []).length;\nconst subject = `📊 Meta Campaign Report - ${fatigueCount > 0 ? '⚠️ ' + fatigueCount + ' Fatigue Alerts' : '✅ All Good'} | ${stats.total_campaigns || 0} campaigns | ${(stats.overall_roas || 0).toFixed(2)}x ROAS`;\n\nconsole.log('Generated subject:', subject);\n\nreturn [{\n  json: {\n    subject: subject,\n    html: emailHTML\n  }\n}];"
+      },
+      "id": "7d22358f-2b2f-4aea-b5bb-212e4c2cf0c3",
+      "name": "Generate Email1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1152,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1637424579,
+          "mode": "list",
+          "cachedResultName": "AI_Analysis_Results",
+          "cachedResultUrl": null
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "analysis_date": "={{ $('Calculate Statistics1').item.json.analysis_date }}",
+            "total_campaigns": "={{ $('Calculate Statistics1').item.json.total_campaigns }}",
+            "total_spend": "={{ $('Calculate Statistics1').item.json.total_spend.toFixed(2) }}",
+            "overall_ctr": "={{ $('Calculate Statistics1').item.json.overall_ctr.toFixed(2)}}%",
+            "overall_cpa": "={{ $('Calculate Statistics1').item.json.overall_cpa.toFixed(2) }}",
+            "avg_frequency": "={{ $('Calculate Statistics1').item.json.avg_frequency.toFixed(2) }}",
+            "fatigue_alerts_count": "={{ $('Calculate Statistics1').item.json.fatigue_alerts.length }}",
+            "top_performer_1": "={{ (() => {\n  const tp = $('Calculate Statistics1').item.json.top_performers?.[0];\n  if (!tp) return 'N/A';\n\n  return `${tp.campaign_name} - ROAS: ${tp.records[0].roas.toFixed(2)}x, CTR: ${tp.records[0].ctr.toFixed(2)}%, Conversions: ${tp.totalConversions.toFixed(0)}, Clicks: ${tp.totalClicks.toFixed(0)}`;\n})() }}",
+            "top_performer_2": "={{ (() => {\n  const tp = $('Calculate Statistics1').item.json.top_performers?.[1];\n  if (!tp) return 'N/A';\n\n  // Also check that records[1] exists\n  const rec = tp.records?.[1];\n  if (!rec) return 'N/A';\n\n  return `${tp.campaign_name} - ROAS: ${rec.roas.toFixed(2)}x, CTR: ${rec.ctr.toFixed(2)}%, Conversions: ${tp.totalConversions.toFixed(1)}, Clicks: ${tp.totalClicks.toFixed(1)}`;\n})() }}",
+            "top_performer_3": "={{ (() => {\n  const tp = $('Calculate Statistics1').item.json.top_performers?.[2];\n  if (!tp) return 'N/A';\n\n  // Also check that records[2] exists\n  const rec = tp.records?.[2];\n  if (!rec) return 'N/A';\n\n  return `${tp.campaign_name} - ROAS: ${$('Calculate Statistics1').item.json.top_performers[2].records[0].roas.toFixed(2)}x, CTR: ${$('Calculate Statistics1').item.json.top_performers[2].records[0].ctr.toFixed(2)}%, Conversions: ${$('Calculate Statistics1').item.json.top_performers[2].records[0].conversions.toFixed()}, Clicks: ${$('Calculate Statistics1').item.json.top_performers[2].records[0].clicks.toFixed()}`;\n})() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "analysis_date",
+              "displayName": "analysis_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_campaigns",
+              "displayName": "total_campaigns",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_spend",
+              "displayName": "total_spend",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "overall_ctr",
+              "displayName": "overall_ctr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "overall_cpa",
+              "displayName": "overall_cpa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "avg_frequency",
+              "displayName": "avg_frequency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fatigue_alerts_count",
+              "displayName": "fatigue_alerts_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "top_performer_1",
+              "displayName": "top_performer_1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "top_performer_2",
+              "displayName": "top_performer_2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "top_performer_3",
+              "displayName": "top_performer_3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "650b48b8-3cee-45da-884b-a55ebcd8731a",
+      "name": "Export to Sheets1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -1152,
+        144
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_GOOGLESHEETSOAUTH2API_CREDENTIAL_ID",
+          "name": "REPLACE_GOOGLESHEETSOAUTH2API_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate campaign statistics\nconst campaigns = items.map(item => item.json);\n\nconst totalSpend = campaigns.reduce((sum, c) => sum + c.spend, 0);\nconst totalImpressions = campaigns.reduce((sum, c) => sum + c.impressions, 0);\nconst totalClicks = campaigns.reduce((sum, c) => sum + c.clicks, 0);\nconst totalConversions = campaigns.reduce((sum, c) => sum + c.conversions, 0);\n\nconst overallCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;\nconst overallCPA = totalConversions > 0 ? totalSpend / totalConversions : 0;\nconst avgFrequency = campaigns.length > 0 ? campaigns.reduce((sum, c) => sum + c.frequency, 0) / campaigns.length : 0;\nconst totalRevenue = campaigns.reduce((sum, c) => sum + c.revenue, 0);\nconst overallROAS = totalSpend > 0 ? totalRevenue / totalSpend : 0;\n\n// Enhanced top performers with multi-KPI scoring\nconst campaignPerformance = {};\n\n// Aggregate by campaign\ncampaigns.forEach(c => {\n  if (!campaignPerformance[c.campaign_name]) {\n    campaignPerformance[c.campaign_name] = {\n      campaign_name: c.campaign_name,\n      totalSpend: 0,\n      totalRevenue: 0,\n      totalImpressions: 0,\n      totalClicks: 0,\n      totalConversions: 0,\n      avgFrequency: 0,\n      records: []\n    };\n  }\n  \n  campaignPerformance[c.campaign_name].totalSpend += c.spend;\n  campaignPerformance[c.campaign_name].totalRevenue += c.revenue;\n  campaignPerformance[c.campaign_name].totalImpressions += c.impressions;\n  campaignPerformance[c.campaign_name].totalClicks += c.clicks;\n  campaignPerformance[c.campaign_name].totalConversions += c.conversions;\n  campaignPerformance[c.campaign_name].records.push(c);\n});\n\nconst topPerformers = Object.values(campaignPerformance)\n  .map(camp => {\n    camp.ctr = camp.totalImpressions > 0 ? (camp.totalClicks / camp.totalImpressions) * 100 : 0;\n    camp.cpc = camp.totalClicks > 0 ? camp.totalSpend / camp.totalClicks : 0;\n    camp.cpa = camp.totalConversions > 0 ? camp.totalSpend / camp.totalConversions : 0;\n    camp.roas = camp.totalSpend > 0 ? camp.totalRevenue / camp.totalSpend : 0;\n    camp.avgFrequency = camp.records.length > 0 ? camp.records.reduce((sum, r) => sum + r.frequency, 0) / camp.records.length : 0;\n    \n    // Multi-KPI performance score\n    camp.performanceScore = (\n      (camp.roas * 40) +           // ROAS: 40% weight (most important)\n      (camp.ctr * 25) +            // CTR: 25% weight\n      ((100 - camp.cpa) * 20) +    // Lower CPA: 20% weight\n      ((100 - camp.cpc) * 10) +    // Lower CPC: 10% weight\n      ((4 - camp.avgFrequency) * 5) // Optimal frequency: 5% weight\n    );\n    \n    return camp;\n  })\n  .filter(camp => camp.totalImpressions > 1000)\n  .sort((a, b) => b.performanceScore - a.performanceScore)\n  .slice(0, 3);\n\n// Fatigue alerts\nconst fatigueAlerts = campaigns\n  .filter(c => c.frequency >= 3.0)\n  .sort((a, b) => b.frequency - a.frequency);\n\n// Demographic analysis\nconst demographicPerf = {};\ncampaigns.forEach(c => {\n  const key = `${c.age}_${c.gender}`;\n  if (!demographicPerf[key]) {\n    demographicPerf[key] = {\n      age: c.age,\n      gender: c.gender,\n      totalSpend: 0,\n      totalImpressions: 0,\n      totalClicks: 0,\n      totalConversions: 0,\n      count: 0\n    };\n  }\n  demographicPerf[key].totalSpend += c.spend;\n  demographicPerf[key].totalImpressions += c.impressions;\n  demographicPerf[key].totalClicks += c.clicks;\n  demographicPerf[key].totalConversions += c.conversions;\n  demographicPerf[key].count += 1;\n});\n\nconst topDemographics = Object.values(demographicPerf)\n  .map(demo => {\n    demo.avgCTR = demo.totalImpressions > 0 ? (demo.totalClicks / demo.totalImpressions) * 100 : 0;\n    demo.avgCPA = demo.totalConversions > 0 ? demo.totalSpend / demo.totalConversions : 0;\n    return demo;\n  })\n  .filter(demo => demo.totalImpressions > 500)\n  .sort((a, b) => b.avgCTR - a.avgCTR)\n  .slice(0, 3);\n\nconst statistics = {\n  analysis_date: new Date().toISOString().split('T')[0],\n  total_campaigns: [...new Set(campaigns.map(c => c.campaign_name))].length,\n  total_spend: totalSpend,\n  total_revenue: totalRevenue,\n  overall_ctr: overallCTR,\n  overall_cpa: overallCPA,\n  overall_roas: overallROAS,\n  avg_frequency: avgFrequency,\n  top_performers: topPerformers,\n  fatigue_alerts: fatigueAlerts,\n  top_demographics: topDemographics,\n  all_campaigns: campaigns\n};\n\nconsole.log('Statistics calculated:', {\n  total_campaigns: statistics.total_campaigns,\n  fatigue_alerts: statistics.fatigue_alerts.length\n});\n\nreturn [{ json: statistics }];"
+      },
+      "id": "61a85dbf-5226-4e90-9e10-38d0f11ae255",
+      "name": "Calculate Statistics1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1968,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Clean and validate campaign data\nconst validatedData = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Skip empty rows\n  if (!data.Campaign_Name || data.Campaign_Name === 'Campaign_Name') {\n    continue;\n  }\n  \n  const cleanedData = {\n    date: data.Date || new Date().toISOString().split('T')[0],\n    campaign_name: data.Campaign_Name || 'Unknown Campaign',\n    ad_set_name: data.Ad_Set_Name || 'Unknown Ad Set',\n    ad_name: data.Ad_Name || 'Unknown Ad',\n    age: data.Age || 'Unknown',\n    gender: data.Gender || 'Unknown',\n    impressions: parseInt(String(data.Impressions).replace(/,/g, '')) || 0,\n    clicks: parseInt(String(data.Clicks).replace(/,/g, '')) || 0,\n    ctr: (() => {\n       if (typeof data.CTR === 'string' && data.CTR.includes('%')) {\n         return parseFloat(data.CTR.replace('%', ''));\n       } else {\n      const ctrNum = parseFloat(data.CTR);\n      return ctrNum > 1 ? ctrNum : ctrNum * 100;\n   }\n})(),\n    cpc: parseFloat(String(data.CPC).replace('$', '')) || 0,\n    cpm: parseFloat(String(data.CPM).replace('$', '')) || 0,\n    spend: parseFloat(String(data.Spend).replace(/[$,]/g, '')) || 0,\n    conversions: parseInt(data.Conversions) || 0,\n    cpa: parseFloat(String(data.CPA).replace('$', '')) || 0,\n    frequency: parseFloat(data.Frequency) || 0,\n    revenue: parseFloat(String(data.Revenue ||      0).replace(/[$,]/g, '')) || 0,\n    roas: (() => {\n  const rev = parseFloat(String(data.Revenue || 0).replace(/[$,]/g, '')) || 0;\n    const spend =    parseFloat(String(data.Spend).replace(/[$,]/g, '')) || 0;\n    return spend > 0 ? rev / spend : 0;\n    })(),\n  };\n  \n  // Add performance flags\n  cleanedData.high_frequency = cleanedData.frequency >= 3.0;\n  cleanedData.low_ctr = cleanedData.ctr < 1.0;\n  cleanedData.potential_fatigue = cleanedData.frequency >= 3.0 && cleanedData.ctr < 1.5;\n  \n  validatedData.push({ json: cleanedData });\n  console.log('Sample CTR values:', validatedData.slice(0,3).map(v => v.json.ctr));\n}\n\nconsole.log(`Processed ${validatedData.length} valid records`);\nreturn validatedData;"
+      },
+      "id": "8aa6a508-2e9a-4d52-acd7-ab2bd9c3ecf9",
+      "name": "Validate Data1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1520,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 775593088,
+          "mode": "list",
+          "cachedResultName": "Campaign Performance",
+          "cachedResultUrl": null
+        },
+        "options": {}
+      },
+      "id": "5e5590a3-1ad8-46cf-ba94-b7c08012549c",
+      "name": "Fetch Campaign Data1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -1744,
+        -80
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_GOOGLESHEETSOAUTH2API_CREDENTIAL_ID",
+          "name": "REPLACE_GOOGLESHEETSOAUTH2API_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "eb4eb177-5137-4262-bbf3-179949859ce4",
+      "name": "Setup Variables1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        -1968,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "id": "4da95310-8420-459f-a605-7b4086d7181d",
+      "name": "Daily Analysis Trigger1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2176,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-3-7-sonnet-20250219",
+          "mode": "list",
+          "cachedResultName": "claude-3-7-sonnet-20250219"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Analyze this Meta campaign performance data:\n\nTotal Campaigns: {{ $json.total_campaigns }}\nTotal Spend: ${{ $json.total_spend.toFixed(2) }}\nOverall CTR: {{ $json.overall_ctr.toFixed(2) }}%\nOverall CPA: ${{ $json.overall_cpa.toFixed(2) }}\nAverage Frequency: {{ $json.avg_frequency.toFixed(2) }}\nOverall ROAS: {{ $json.overall_roas ? $json.overall_roas.toFixed(2) + 'x' : 'N/A' }}\nTotal Revenue: ${{ $json.total_revenue || 0 }}\n\nTop Performers:\n{{ $json.top_performers.map(p => `- ${p.campaign_name}: ROAS ${p.roas.toFixed(2)}x, CTR ${p.ctr.toFixed(2)}%, CPA $${p.cpa.toFixed(2)}, Frequency ${p.avgFrequency.toFixed(1)}, $${p.totalSpend.toFixed(2)} Spend`).join('\\n') }}\n\nFatigue Alerts (Freq ≥3.0):\n{{ $json.fatigue_alerts.map(f => `- ${f.campaign_name}: ${f.frequency.toFixed(1)} Frequency, ${f.ctr.toFixed(2)}% CTR, ${f.age || 'N/A'} ${f.gender || 'N/A'}`).join('\\n') }}\n\nTop Demographics:\n{{ $json.top_demographics.map(d => `- ${d.age} ${d.gender}: ${d.avgCTR.toFixed(2)}% CTR, $${d.avgCPA.toFixed(2)} CPA, ${d.count} campaigns`).join('\\n') }}\n\nKey Insights from the data:\n- Your average frequency is {{ $json.avg_frequency.toFixed(1) }} (ideal is 1.5-3.0)\n- Overall CTR is {{ $json.overall_ctr.toFixed(2) }}% \n- You have {{ $json.fatigue_alerts.length }} campaigns with high frequency that need immediate attention\n- Overall ROAS is {{ $json.overall_roas ? $json.overall_roas.toFixed(2) + 'x' : 'below 1x' }}\n\nFocus on ROAS as the primary performance indicator, followed by CTR, CPA, and frequency optimization.\n\nProvide analysis with:\n1. Executive summary of performance\n2. Top 3 performing campaigns and why they work\n3. URGENT: Immediate actions for high frequency campaigns ({{ $json.avg_frequency.toFixed(1) }} avg frequency!)\n4. Budget reallocation recommendations based on ROAS\n5. Demographic insights and targeting recommendations\n6. Specific frequency optimization steps\n\nBe specific, actionable, and focus heavily on the frequency issues since this account shows signs of ad fatigue."
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 2000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        -1808,
+        352
+      ],
+      "id": "be325ac1-8286-48b4-953c-502b223d66ca",
+      "name": "AI Analysis",
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_ANTHROPICAPI_CREDENTIAL_ID",
+          "name": "REPLACE_ANTHROPICAPI_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1536,
+        192
+      ],
+      "id": "3487c020-34be-4bd3-b29b-fa4ef636fab7",
+      "name": "Merge"
+    }
+  ],
+  "connections": {
+    "Generate Email1": {
+      "main": [
+        [
+          {
+            "node": "Send Email Report1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Statistics1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Data1": {
+      "main": [
+        [
+          {
+            "node": "Calculate Statistics1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Campaign Data1": {
+      "main": [
+        [
+          {
+            "node": "Validate Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Setup Variables1": {
+      "main": [
+        [
+          {
+            "node": "Fetch Campaign Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Analysis Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Setup Variables1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Analysis": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Generate Email1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Export to Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "ePxxa9ncyIy3b631"
+}
